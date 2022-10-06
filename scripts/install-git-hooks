@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# 
+if ! test -d .git; then
+    echo "Use make hooks to install git hooks."
+    exit 1
+fi
+
+mkdir -p .git/hooks
+
+ln -sf ../../scripts/pre-commit-hooks .git/hooks/pre-commit || exit 1
+chmod +x .git/hooks/pre-commit
+
+ln -sf ../../scripts/commit-msg-hooks .git/hooks/commit-msg || exit 1
+chmod +x .git/hooks/commit-msg
+
+echo "Git hooks are installed successfully."
+exit 0
