@@ -21,29 +21,6 @@ void die(const char *s)
     exit(EXIT_FAILURE);
 }
 
-int clear_screen(void)
-{
-    evastr dst = evancat(bufio,CLEAR_SCREEN,sizeof(CLEAR_SCREEN)-1);
-    if (!dst)
-        return -1;
-    bufio = dst;
-    return 0;
-}
-
-int cursor_reposition(void)
-{
-    evastr dst = evancat(bufio,CURSOR_REPOSITION,sizeof(CURSOR_REPOSITION)-1);
-    if (!dst)
-        return -1;
-    bufio = dst;
-    return 0;
-}
-
-int clear_reposition(void)
-{
-    return clear_screen() || cursor_reposition();
-}
-
 void disableRawMode(void)
 {
     evafree(bufio);
@@ -51,7 +28,6 @@ void disableRawMode(void)
         die("tcsetattr");
     
 }
-
 
 void enableRawMode(void)
 {
@@ -122,4 +98,42 @@ int getWindowSize(void)
         terminal_config.screenrows = ws.ws_row;
         return 0;
     }
+}
+
+int refresh(void)
+{
+    evastr cur = bufio;
+    uint32_t len = evalen(bufio);
+    do{
+        errno = 0;
+        ssize_t sv = write(STDIN_FILENO,cur,len);
+        if (sv == -1)
+            return 1;
+        cur += sv;
+        len -= sv;
+    } while(len);
+    return 0;
+}
+
+int clear_screen(void)
+{
+    evastr dst = evancat(bufio,CLEAR_SCREEN,sizeof(CLEAR_SCREEN)-1);
+    if (!dst)
+        return -1;
+    bufio = dst;
+    return 0;
+}
+
+int cursor_reposition(void)
+{
+    evastr dst = evancat(bufio,CURSOR_REPOSITION,sizeof(CURSOR_REPOSITION)-1);
+    if (!dst)
+        return -1;
+    bufio = dst;
+    return 0;
+}
+
+int clear_reposition(void)
+{
+    return clear_screen() || cursor_reposition();
 }

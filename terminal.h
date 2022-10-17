@@ -17,12 +17,51 @@ extern struct editorConfig terminal_config;
 
 /*
 DESCRIPTION:
+    Disable raw mode and release resource.
+
+TIME: 2022/10/10
+*/
+void disableRawMode(void)
+{
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal_config.orig_termios) == -1)
+        die("tcsetattr");
+}
+
+/*
+DESCRIPTION:
+    Enable raw mode.
+    On error, it will call die() and never return.
+
+TIME: 2022/10/10
+*/
+void enableRawMode(void);
+int getCursorPosition(void);
+int getWindowSize(void);
+
+/*
+DESCRIPTION:
     Urgent error handling.
     Simply, we just call clear_reposition() and then print error message. Finally, call exit().
 
 TIME: 2022/10/10
 */
 void die(const char *s);
+
+/*
+DESCRIPTION:
+    Refresh screen.
+
+RETURN VALUE:
+    On succeed, return 0
+    On error, return 1 and set @errno.
+
+TIME: 2022/10/17
+*/
+int refresh(void);
+
+/*
+    Below functions don't change on screen immediately. It will effect only when the function refresh() is called.
+*/
 
 /*
 DESCRIPTION:
@@ -64,28 +103,5 @@ RETURN VALUE:
 TIME: 2022/10/10
 */
 int clear_reposition(void);
-
-/*
-DESCRIPTION:
-    Disable raw mode and release resource.
-
-TIME: 2022/10/10
-*/
-void disableRawMode(void)
-{
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal_config.orig_termios) == -1)
-        die("tcsetattr");
-}
-
-/*
-DESCRIPTION:
-    Enable raw mode.
-    On error, it will call die() and never return.
-
-TIME: 2022/10/10
-*/
-void enableRawMode(void);
-int getCursorPosition(void);
-int getWindowSize(void);
 
 #endif  // !defined(__TERMINAL_H__)
