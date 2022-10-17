@@ -6,28 +6,31 @@
 #include "compiler.h"
 #include "eva_alloc.h"
 
-#define EVA_T(x) ((eva_t *) ((x) -evaoffset()))
-#define Realptr(x) ((x) -evaoffset())
-
-#define MAX_ALLOCATE_SIZE 1024
+#define MAX_ALLOCATE_SIZE 4096u
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct EVA {
+    uint32_t len;    // used size
+    uint32_t space;  // total allocate size
+    char str[];
+};
 typedef struct EVA eva_t;
 
-static inline size_t evaoffset(void)
+static inline eva_t *realpos(evastr src)
 {
-    return sizeof(uint32_t) * 2;
+    eva_t x;
+    return (eva_t*)(src - sizeof(x.len) - sizeof(x.space));
 }
 
-__attribute__((nonnull)) static inline size_t evaspace(evastr nerv)
+__attribute__((nonnull)) static inline uint32_t evaspace(evastr src)
 {
-    return EVA_T(nerv)->space;
+    return realpos(src)->space;
 }
 
-static size_t digit10(const unsigned long long val)
+static inline size_t digit10(const unsigned long long val)
 {
     if (val < 10)
         return 1;
@@ -51,26 +54,32 @@ static size_t digit10(const unsigned long long val)
     return 12 + digit10(val / 1000000000000);  // 10 to the power of 12
 }
 
-__attribute__((nonnull)) static inline eva_t *evagrow(evastr src, uint32_t len)
+static inline eva_t *evagrow(evastr src, uint32_t len)
 {
-    eva_t *obj = EVA_T(src);
+    if (!src)
+        return NULL;
+    eva_t *obj = realpos(src);
     if (obj->space >= len)
         return obj;
-    if (len < MAX_ALLOCATE_SIZE)
-        len *= 2;
-    else if (unlikely(len > UINT32_MAX - MAX_ALLOCATE_SIZE))
-        return NULL;
-    else
-        len += MAX_ALLOCATE_SIZE;
+    if (len >> 1 < obj->len) {
+        if (obj->len > MAX_ALLOCATE_SIZE >> 1)
+            len += MAX_ALLOCATE_SIZE;
+        else
+            len = obj->len << 1;
+    }
     if (unlikely(sizeof(eva_t) > SIZE_MAX - 1 - len))
         return NULL;
     obj = eva_realloc(obj, sizeof(eva_t) + len + 1);
-    if (unlikely(!obj))
+    if (!obj)
         return NULL;
-    obj->space = len;
+    obj->space = len - obj->len;
     return obj;
 }
 
+__attribute__((nonnull)) uint32_t evalen(evastr src)
+{
+    return realpos(src)->len;
+}
 
 evastr evaempty(void)
 {
@@ -91,11 +100,12 @@ evastr evannew(const char *src, uint32_t len)
         return NULL;
     obj->len = len;
     obj->space = len;
-    if (src)
+    if (src){
         memcpy(obj->str, src, len);
-    else
+        obj->str[len] = '\0';
+    }else{
         memset(obj->str, '\0', len);
-    obj->str[len] = '\0';
+    }
     return obj->str;
 }
 
@@ -128,8 +138,9 @@ evastr evaLL(long long value)
     return evannew(buf, size);
 }
 
-__attribute__((nonnull)) evastr
-    evancpy(evastr restrict dst, const char *restrict src, const uint32_t len)
+__attribute__((nonnull)) evastr evancpy(evastr restrict dst,
+                                        const char *restrict src,
+                                        const uint32_t len)
 {
     eva_t *obj = evagrow(dst, len);
     if (!obj)
@@ -140,14 +151,17 @@ __attribute__((nonnull)) evastr
     return obj->str;
 }
 
-__attribute__((nonnull)) evastr evacpy(evastr restrict dst, const char *restrict src)
+__attribute__((nonnull)) evastr evacpy(evastr restrict dst,
+                                       const char *restrict src)
 {
     return evancpy(dst, src, strlen(src));
 }
 
-__attribute__((nonnull)) evastr evancat(evastr dst, const char *src, const size_t len)
+__attribute__((nonnull)) evastr evancat(evastr dst,
+                                        const char *src,
+                                        const size_t len)
 {
-    eva_t *obj = EVA_T(dst);
+    eva_t *obj = realpos(dst);
     if (unlikely(len > UINT32_MAX - obj->len))
         return NULL;
     obj = evagrow(dst, len + obj->len);
@@ -169,24 +183,26 @@ __attribute__((nonnull)) evastr evacateva(evastr dst, const evastr src)
     return evancat(dst, src, evalen(src));
 }
 
-__attribute__((nonnull)) evastr evacatprintf(evastr dst, const char *format, ...)
+__attribute__((nonnull)) evastr evacatprintf(evastr dst,
+                                             const char *format,
+                                             ...)
 {
     va_list args, temp;
     va_start(args, format);
     va_copy(temp, args);  // Because after function call vsnprintf, value of
                           // args is undefined. So we copy args to temp.
     char Sbuf[1024], *buf = Sbuf;
-    int len = vsnprintf(NULL, 0, format, args) + 1;
+    int len = vsnprintf(NULL, 0, format, args);
     va_end(args);
-    if (unlikely(len < 0))
+    if (len < 0)
         goto Fail;
-    len++;
+    len++; // add terminating null term
     if ((size_t) len > sizeof(Sbuf)) {
-        buf = eva_calloc(len, sizeof(char));
+        buf = eva_malloc(len);
         if (!buf)
             goto Fail;
     }
-    if (unlikely(vsnprintf(buf, len, format, temp) < 0))
+    if (vsnprintf(buf, len, format, temp) < 0)
         goto Fail;
     va_end(temp);
     dst = evacat(dst, buf);
@@ -199,31 +215,31 @@ Fail:
     return NULL;
 }
 
-__attribute__((nonnull)) evastr evaresize(evastr dst)
+__attribute__((nonnull)) evastr evaresize(evastr src)
 {
-    if (evaspace(dst) == 0)
-        return dst;
-    return eva_realloc(Realptr(dst), sizeof(eva_t) + evalen(dst) + 1);
+    if (evaspace(src) == 0)
+        return src;
+    return eva_realloc(realpos(src), sizeof(eva_t) + evalen(src) + 1);
 }
 
-void evafree(evastr nerv)
+void evafree(evastr src)
 {
-    if (nerv)
-        free(Realptr(nerv));
+    if (src)
+        free(realpos(src));
 }
 
 #if defined(EVA_TEST)
 
 #include <errno.h>
+#include <time.h>
 #include "simpletest.h"
-#include "xorrand.h"
 
 #define MAX_STR_SIZE 1024
 
 static inline void randstr(char *str, size_t len)
 {
     for (size_t i = 0; i < len; ++i)
-        str[i] = RAND() % 26 + 65;
+        str[i] = rand() % 26 + 65;
     str[len] = '\0';
 }
 
@@ -231,7 +247,7 @@ static int testevannew(unsigned int count)
 {
     while (count) {
         char str[MAX_STR_SIZE];
-        size_t len = RAND() % sizeof(str);
+        size_t len = rand() % sizeof(str);
         randstr(str, len);
         evastr string = evannew(str, len);
         if (!string)
@@ -253,7 +269,7 @@ static int testevannew(unsigned int count)
 static int testevaLL(unsigned int count)
 {
     while (count) {
-        long long val = RAND();
+        long long val = rand();
         evastr string = evaLL(val);
         if (!string)
             return 1;
@@ -286,7 +302,7 @@ static int testevancpy(unsigned int count)
         if (!string)
             return 1;
         char str[MAX_STR_SIZE];
-        size_t len = RAND() % sizeof(str);
+        size_t len = rand() % sizeof(str);
         randstr(str, len);
         evastr test = evancpy(string, str, len);
         if (!test) {
@@ -312,7 +328,7 @@ static int testevancpy(unsigned int count)
         if (!src)
             return 1;
         char str[sizeof(evangelion) - 2];
-        size_t len = RAND() % sizeof(str);
+        size_t len = rand() % sizeof(str);
         randstr(str, len);
         src = evancpy(
             src, str,
@@ -334,7 +350,7 @@ static int testevancat(unsigned int count)
 {
     while (count) {
         char str[MAX_STR_SIZE];
-        size_t len = RAND() % sizeof(len);
+        size_t len = rand() % sizeof(len);
         randstr(str, len);
         evastr string = evancat(evaempty(), str, len);
         if (!string)
@@ -355,9 +371,8 @@ static int testevancat(unsigned int count)
 
 int main(void)
 {
-    seed_rand(seeds);
+    srand(time(NULL));
     const unsigned int count = 100000;
-
     printf("Each test for " LIGHT_CYAN "%u" NORMAL " times.\n", count);
     test_this("evannew", testevannew(count) == 0);
     test_this("evaLL", testevaLL(count) == 0);
