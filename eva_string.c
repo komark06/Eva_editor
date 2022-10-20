@@ -86,8 +86,10 @@ evastr evaempty(void)
     return evannew("", 0);
 }
 
-__attribute__((nonnull)) evastr evanew(const char *src)
+evastr evanew(const char *src)
 {
+    if (!src)
+        return evaempty();
     return evannew(src, strlen(src));
 }
 
@@ -109,8 +111,10 @@ evastr evannew(const char *src, uint32_t len)
     return obj->str;
 }
 
-__attribute__((nonnull)) evastr evadup(const evastr src)
+evastr evadup(const evastr src)
 {
+    if (!src)
+        return evaempty();
     return evannew(src, evalen(src));
 }
 
@@ -138,10 +142,18 @@ evastr evaLL(long long value)
     return evannew(buf, size);
 }
 
-__attribute__((nonnull)) evastr evancpy(evastr restrict dst,
-                                        const char *restrict src,
-                                        const uint32_t len)
+__attribute__((nonnull(2))) evastr evacpy(evastr restrict dst,
+                                          const char *restrict src)
 {
+    return evancpy(dst, src, strlen(src));
+}
+
+__attribute__((nonnull(2))) evastr evancpy(evastr restrict dst,
+                                           const char *restrict src,
+                                           const uint32_t len)
+{
+    if (!dst)
+        return evannew(src, len);
     eva_t *obj = evagrow(dst, len);
     if (!obj)
         return NULL;
@@ -151,16 +163,17 @@ __attribute__((nonnull)) evastr evancpy(evastr restrict dst,
     return obj->str;
 }
 
-__attribute__((nonnull)) evastr evacpy(evastr restrict dst,
-                                       const char *restrict src)
+__attribute__((nonnull(2))) evastr evacat(evastr dst, const char *src)
 {
-    return evancpy(dst, src, strlen(src));
+    return evancat(dst, src, strlen(src));
 }
 
-__attribute__((nonnull)) evastr evancat(evastr dst,
-                                        const char *src,
-                                        const size_t len)
+__attribute__((nonnull(2))) evastr evancat(evastr dst,
+                                           const char *src,
+                                           const size_t len)
 {
+    if (!dst)
+        return evannew(src, len);
     eva_t *obj = realpos(dst);
     if (unlikely(len > UINT32_MAX - obj->len))
         return NULL;
@@ -173,12 +186,7 @@ __attribute__((nonnull)) evastr evancat(evastr dst,
     return obj->str;
 }
 
-__attribute__((nonnull)) evastr evacat(evastr dst, const char *src)
-{
-    return evancat(dst, src, strlen(src));
-}
-
-__attribute__((nonnull)) evastr evacateva(evastr dst, const evastr src)
+__attribute__((nonnull(2))) evastr evacateva(evastr dst, const evastr src)
 {
     return evancat(dst, src, evalen(src));
 }
@@ -205,7 +213,7 @@ __attribute__((nonnull)) evastr evacatprintf(evastr dst,
     if (vsnprintf(buf, len, format, temp) < 0)
         goto Fail;
     va_end(temp);
-    dst = evacat(dst, buf);
+    dst = evancat(dst, buf, len);
     if (buf != Sbuf)
         evafree(buf);
     return dst;
@@ -263,6 +271,19 @@ static int testevannew(unsigned int count)
         evafree(string);
         count--;
     }
+    char test[MAX_STR_SIZE] = {0};
+    evastr string = evannew(NULL, MAX_STR_SIZE);
+    if (!string)
+        return 1;
+    if (memcmp(string, test, MAX_STR_SIZE)) {
+        evafree(string);
+        return -1;
+    }
+    if (evalen(string) != MAX_STR_SIZE) {
+        evafree(string);
+        return -2;
+    }
+    evafree(string);
     return 0;
 }
 
@@ -298,9 +319,7 @@ static int testevancpy(unsigned int count)
 {
     // Copy from larger string
     for (unsigned int i = 0; i < count; ++i) {
-        evastr string = evaempty();
-        if (!string)
-            return 1;
+        evastr string = NULL;
         char str[MAX_STR_SIZE];
         size_t len = rand() % sizeof(str);
         randstr(str, len);
@@ -352,7 +371,7 @@ static int testevancat(unsigned int count)
         char str[MAX_STR_SIZE];
         size_t len = rand() % sizeof(len);
         randstr(str, len);
-        evastr string = evancat(evaempty(), str, len);
+        evastr string = evancat(NULL, str, len);
         if (!string)
             return 1;
         if (memcmp(string, str, len)) {
