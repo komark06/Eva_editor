@@ -8,7 +8,7 @@
 #include "terminal.h"
 
 #define Memory_Error_Message "Not enough memory"
-
+#define WELCOME "Welcomde to Eva_Editor 0.0.1\n\r"
 #define CTRL_KEY(k) ((k) &0x1f)
 
 /* Global variable */
@@ -31,26 +31,50 @@ void editorDrawRows(void)
 {
     for (unsigned short y = 0; y < terminal_config.screenrows -1; y++) {
         char buf[32];
-        int len = snprintf(buf,sizeof(buf),"%hu\r\n",y+1);
+        int len = snprintf(buf,sizeof(buf),"%hu",y+1);
         if (len < 0)
-            memcpy(buf,"snprintf error!!",17);
+            die("snprintf");
         if (add_screen(buf,len))
             die(Memory_Error_Message);
+        if (terminal_config.screenrows/2 == y){
+            unsigned short wellen = sizeof(WELCOME);
+            int pad;
+            if  (wellen > terminal_config.screencols){
+                wellen = terminal_config.screencols;
+                pad = 0;
+            } else{
+                pad = (terminal_config.screencols - wellen)/2;
+            }
+            while(pad > 0){
+                if(add_screen(" ",1))
+                    die(Memory_Error_Message);
+                pad--;
+            }
+            if(add_screen(WELCOME,wellen))
+                die(Memory_Error_Message);
+        } else{
+            if(add_screen("\n\r",3))
+                die(Memory_Error_Message);
+        }
     }
     char ed[1024];
     int len = snprintf(ed,sizeof(ed),"row = %hu, col = %hu",terminal_config.screenrows,terminal_config.screencols);
     if (len < 0)
-        memcpy(ed,"snprintf error!!",17);
+        die("snprintf");
     if (add_screen(ed,len))
         die(Memory_Error_Message);
 }
 
 void editorRefreshScreen(void)
 {
+    if (hide_cursor())
+        die(Memory_Error_Message);
     if (clear_reposition())
         die(Memory_Error_Message);
     editorDrawRows();
     if (reposition_cursor())
+        die(Memory_Error_Message);
+    if (show_cursor())
         die(Memory_Error_Message);
     if (refresh())
         die("write");

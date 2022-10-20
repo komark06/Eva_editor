@@ -6,8 +6,9 @@
 #define SETATTR_ERR "tcsetattr"
 
 #define CLEAR_SCREEN "\x1b[2J" // VT100 reference: https://vt100.net/docs/vt100-ug/chapter3.html#ED
-#define CURSOR_REPOSITION "\x1b[H" // VT100 reference: https://vt100.net/docs/vt100-ug/chapter3.html#CUP
-
+#define REPOSITION_CURSOR "\x1b[H" // VT100 reference: https://vt100.net/docs/vt100-ug/chapter3.html#CUP
+#define HIDE_CURSOR "\x1b[?25l" // VT100 reference: https://vt100.net/docs/vt510-rm/DECTCEM.html
+#define SHOW_CURSOR "\x1b[?25h" // VT100 reference: https://vt100.net/docs/vt510-rm/DECTCEM.html
 
 /* Global variable */
 static evastr bufio = NULL;
@@ -22,10 +23,10 @@ void die(const char *s)
 
 void disableRawMode(void)
 {
-    evafree(bufio);
+    clear_reposition();
+    refresh();
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal_config.orig_termios) == -1)
         die("tcsetattr");
-    
 }
 
 void enableRawMode(void)
@@ -64,21 +65,21 @@ static inline int getCursorPosition(void)
 {
     char buf[32];
     unsigned int i = 0;
-
+    errno = 0;
     if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4)
         return -1;
 
     while (i < sizeof(buf) - 1) {
-        if (read(STDIN_FILENO, &buf[i], 1) != 1)
+        if (read(STDIN_FILENO, &buf[i], 1) != 1 || buf[i] == 'R')
             break;
-        if (buf[i] == 'R')
-            break;
+    
         i++;
     }
     buf[i] = '\0';
 
     if (strncmp(buf,"\x1b[",2))
         return -2;
+    errno = 0;
     if (sscanf(&buf[2], "%hu;%hu", &terminal_config.screenrows, &terminal_config.screencols) != 2)
         return -1;
 
@@ -88,7 +89,9 @@ static inline int getCursorPosition(void)
 int getWindowSize(void)
 {
     struct winsize ws;
+    errno = 0;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+        errno = 0;
         if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12)
             return -1;
         return getCursorPosition();
@@ -138,7 +141,7 @@ int clear_screen(void)
 
 int reposition_cursor(void)
 {
-    evastr dst = evancat(bufio,CURSOR_REPOSITION,sizeof(CURSOR_REPOSITION)-1);
+    evastr dst = evancat(bufio,REPOSITION_CURSOR,sizeof(REPOSITION_CURSOR)-1);
     if (!dst)
         return -1;
     bufio = dst;
@@ -148,4 +151,23 @@ int reposition_cursor(void)
 int clear_reposition(void)
 {
     return clear_screen() || reposition_cursor();
+}
+
+
+int hide_cursor(void)
+{
+    evastr dst = evancat(bufio,HIDE_CURSOR,sizeof(HIDE_CURSOR)-1);
+    if (!dst)
+        return -1;
+    bufio = dst;
+    return 0;
+}
+
+int show_cursor(void)
+{
+    evastr dst = evancat(bufio,SHOW_CURSOR,sizeof(SHOW_CURSOR)-1);
+    if (!dst)
+        return -1;
+    bufio = dst;
+    return 0;
 }

@@ -1,8 +1,13 @@
 CC=gcc
-DISABLE = -Wno-unused-result
-CFLAG =-g -Og -Wextra -Wall -Winline -std=c99 -pedantic -fsanitize=leak -fsanitize=address -fsanitize=undefined $(DISABLE)
+DISABLE=-Wno-unused-result
+fsan?=1
+CFLAG=-g -Og -Wextra -Wall -Winline -std=c99 -pedantic $(FSAN) $(DISABLE)
 OBJ=common.o eva_string.o terminal.o main.o
 EXE=eva
+
+ifneq ($(fsan),0)
+	FSAN=-fsanitize=leak -fsanitize=address -fsanitize=undefined
+endif
 
 obj:$(OBJ) 
 	$(CC) -o $(EXE) $(OBJ) $(CFLAG)

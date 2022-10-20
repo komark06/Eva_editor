@@ -124,4 +124,28 @@ TIME: 2022/10/10
 */
 int clear_reposition(void);
 
+/*
+DESCRIPTION:
+    Hide cursor.
+
+RETURN VALUE:
+    On succeed, return 0
+    On error, return -1.
+
+TIME: 2022/10/20
+*/
+int hide_cursor(void);
+
+/*
+DESCRIPTION:
+    Show cursor.
+
+RETURN VALUE:
+    On succeed, return 0
+    On error, return -1.
+
+TIME: 2022/10/20
+*/
+int show_cursor(void);
+
 #endif  // !defined(__TERMINAL_H__)
