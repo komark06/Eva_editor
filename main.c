@@ -7,12 +7,14 @@
 #include "eva_string.h"
 #include "terminal.h"
 
+#define Memory_Error_Message "Not enough memory"
+
 #define CTRL_KEY(k) ((k) &0x1f)
 
 /* Global variable */
 struct editorConfig terminal_config;
 
-char editorReadKey()
+char editorReadKey(void)
 {
     int nread;
     char c;
@@ -42,14 +44,15 @@ void editorDrawRows(void)
     write(STDOUT_FILENO,buf,len);
 }
 
-void editorRefreshScreen()
+void editorRefreshScreen(void)
 {
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "\x1b[H", 3);
-
+    if (clear_reposition())
+        die(Memory_Error_Message);
     editorDrawRows();
-
-    write(STDOUT_FILENO, "\x1b[H", 3);
+    if (cursor_reposition())
+        die(Memory_Error_Message);
+    if (refresh())
+        die("write");
 }
 
 /*** input ***/

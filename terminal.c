@@ -116,6 +116,17 @@ int refresh(void)
     return 0;
 }
 
+int add_screen(const char *buf, size_t len)
+{
+    if (!buf)
+        return -1;
+    evastr dst = evancat(bufio,buf,len);
+    if (!dst)
+        return -1;
+    bufio = dst;
+    return 0;
+}
+
 int clear_screen(void)
 {
     evastr dst = evancat(bufio,CLEAR_SCREEN,sizeof(CLEAR_SCREEN)-1);

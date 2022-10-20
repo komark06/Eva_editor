@@ -72,11 +72,24 @@ int refresh(void);
 
 /*
 DESCRIPTION:
+    Add content to screen.
+
+RETURN VALUE:
+    On succeed, return 0
+    On error, return -1.
+              return -2 when @buf is NULL.
+
+TIME: 2022/10/20
+*/
+int add_screen(const char *buf, size_t len);
+
+/*
+DESCRIPTION:
     Clear screen.
 
 RETURN VALUE:
     On succeed, return 0
-    On error, return -1 and set @errno.
+    On error, return -1.
     
     VT100 reference: https://vt100.net/docs/vt100-ug/chapter3.html#ED
 
@@ -90,7 +103,7 @@ DESCRIPTION:
     
 RETURN VALUE:
     On succeed, return 0
-    On error, return -1 and set @errno.
+    On error, return -1.
     
     VT100 reference: https://vt100.net/docs/vt100-ug/chapter3.html#CUP
 
@@ -105,7 +118,7 @@ DESCRIPTION:
 
 RETURN VALUE:
     On succeed, return 0
-    On error, return -1 and set @errno.
+    On error, return -1.
 
 TIME: 2022/10/10
 */
