@@ -33,14 +33,14 @@ void editorDrawRows(void)
         char buf[32];
         int len = snprintf(buf,sizeof(buf),"%hu\r\n",y+1);
         if (len < 0)
-            die("snprintf");
+            memcpy(buf,"snprintf error!!",17);
         if (add_screen(buf,len))
             die(Memory_Error_Message);
     }
     char ed[1024];
     int len = snprintf(ed,sizeof(ed),"row = %hu, col = %hu",terminal_config.screenrows,terminal_config.screencols);
     if (len < 0)
-        die("snprintf");
+        memcpy(ed,"snprintf error!!",17);
     if (add_screen(ed,len))
         die(Memory_Error_Message);
 }
@@ -50,7 +50,7 @@ void editorRefreshScreen(void)
     if (clear_reposition())
         die(Memory_Error_Message);
     editorDrawRows();
-    if (cursor_reposition())
+    if (reposition_cursor())
         die(Memory_Error_Message);
     if (refresh())
         die("write");
@@ -58,7 +58,7 @@ void editorRefreshScreen(void)
 
 /*** input ***/
 
-void editorProcessKeypress()
+void editorProcessKeypress(void)
 {
     char c = editorReadKey();
 
@@ -72,9 +72,9 @@ void editorProcessKeypress()
 
 /*** init ***/
 
-void initEditor()
+void initEditor(void)
 {
-    if (getWindowSize() == -1)
+    if (getWindowSize())
         die("getWindowSize");
 }
 

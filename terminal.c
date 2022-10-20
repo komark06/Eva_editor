@@ -119,7 +119,7 @@ int refresh(void)
 int add_screen(const char *buf, size_t len)
 {
     if (!buf)
-        return -1;
+        return -2;
     evastr dst = evancat(bufio,buf,len);
     if (!dst)
         return -1;
@@ -136,7 +136,7 @@ int clear_screen(void)
     return 0;
 }
 
-int cursor_reposition(void)
+int reposition_cursor(void)
 {
     evastr dst = evancat(bufio,CURSOR_REPOSITION,sizeof(CURSOR_REPOSITION)-1);
     if (!dst)
@@ -147,5 +147,5 @@ int cursor_reposition(void)
 
 int clear_reposition(void)
 {
-    return clear_screen() || cursor_reposition();
+    return clear_screen() || reposition_cursor();
 }
