@@ -4,81 +4,79 @@
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
-#include "eva_string.h"
-#include "terminal.h"
 
-#define CTRL_KEY(k) ((k) &0x1f)
+#define GETATTR_ERR "tcgetattr"
+#define SETATTR_ERR "tcsetattr"
 
-char editorReadKey()
+struct editorConfig {
+    unsigned short screenrows;
+    unsigned short screencols;
+    struct termios orig_termios;
+};
+
+struct editorConfig terminal_config;
+
+static inline void clear_reposition(void)
 {
-    int nread;
-    char c;
-    while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
-        if (nread == -1 && errno != EAGAIN)
-            die("read");
-    }
-    return c;
+    write(STDIN_FILENO,"\x1b[2J\x1b[H",8);
 }
 
-/*** output ***/
-
-void editorDrawRows(void)
+void die(const char *s)
 {
-    for (unsigned short y = 0; y < terminal_config.screenrows -1; y++) {
-        char buf[32];
-        int len = snprintf(buf,sizeof(buf),"%hu\r\n",y+1);
-        if (len < 0)
-            die("snprintf");
-        write(STDOUT_FILENO, buf, len);
-        //write(STDOUT_FILENO, "~\r\n", 3);
-    }
-    char buf[1024];
-    int len = snprintf(buf,sizeof(buf),"row = %hu, col = %hu",terminal_config.screenrows,terminal_config.screencols);
-    if (len < 0)
-        die("snprintf");
-    write(STDOUT_FILENO,buf,len);
+
+    perror(s);
+    putchar('\r');
+    exit(EXIT_FAILURE);
 }
 
-void editorRefreshScreen()
+void disableRawMode(void)
 {
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "\x1b[H", 3);
-
-    editorDrawRows();
-
-    write(STDOUT_FILENO, "\x1b[H", 3);
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal_config.orig_termios) == -1)
+        die("tcsetattr");
+    
 }
 
-/*** input ***/
-
-void editorProcessKeypress()
+void enableRawMode(void)
 {
-    char c = editorReadKey();
-
-    switch (c) {
-    case CTRL_KEY('q'):
+    if (tcgetattr(STDIN_FILENO, &terminal_config.orig_termios) == -1)
+        die(GETATTR_ERR);
+    if (atexit(disableRawMode)) {
         clear_reposition();
-        exit(0);
-        break;
+        fprintf(stderr, "atexit failed.\n\r");
+        exit(1);
     }
-}
-
-/*** init ***/
-
-void initEditor()
-{
-    if (getWindowSize() == -1)
-        die("getWindowSize");
+    struct termios raw = terminal_config.orig_termios;
+    raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+    raw.c_oflag &= ~(OPOST);
+    raw.c_cflag |= (CS8);
+    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+    raw.c_cc[VMIN] = 1;
+    raw.c_cc[VTIME] = 1;
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
+        die(SETATTR_ERR);
+    struct termios test;
+    if (tcgetattr(STDIN_FILENO, &test) == -1)
+        die(GETATTR_ERR);
+    if (raw.c_iflag != test.c_iflag || raw.c_oflag != test.c_oflag ||raw.c_cflag != test.c_cflag ||
+        raw.c_lflag != test.c_lflag || test.c_cc[VMIN] != 1 ||
+        test.c_cc[VTIME] != 1) {
+        clear_reposition();
+        fprintf(stderr, "Can't set terminal to raw mode.\n\r");
+        exit(1);
+    }
 }
 
 int main()
 {
     enableRawMode();
-    initEditor();
-    while (1) {
-        editorRefreshScreen();
-        editorProcessKeypress();
+    char c;
+    while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q') {
+    if (iscntrl(c)) {
+      printf("%d\n\r", c);
+    } else {
+      printf("%d ('%c')\n\r", c, c);
     }
+  }
 
     return 0;
 }
