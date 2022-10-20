@@ -9,6 +9,9 @@
 
 #define CTRL_KEY(k) ((k) &0x1f)
 
+/* Global variable */
+struct editorConfig terminal_config;
+
 char editorReadKey()
 {
     int nread;

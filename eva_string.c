@@ -19,10 +19,10 @@ struct EVA {
 };
 typedef struct EVA eva_t;
 
-static inline eva_t *realpos(evastr src)
+static inline eva_t *realpos(const evastr src)
 {
     eva_t x;
-    return (eva_t*)(src - sizeof(x.len) - sizeof(x.space));
+    return (eva_t *) (src - sizeof(x.len) - sizeof(x.space));
 }
 
 __attribute__((nonnull)) static inline uint32_t evaspace(evastr src)
@@ -30,7 +30,7 @@ __attribute__((nonnull)) static inline uint32_t evaspace(evastr src)
     return realpos(src)->space;
 }
 
-static inline size_t digit10(const unsigned long long val)
+static unsigned int digit10(const unsigned long long val)
 {
     if (val < 10)
         return 1;
@@ -100,10 +100,10 @@ evastr evannew(const char *src, uint32_t len)
         return NULL;
     obj->len = len;
     obj->space = len;
-    if (src){
+    if (src) {
         memcpy(obj->str, src, len);
         obj->str[len] = '\0';
-    }else{
+    } else {
         memset(obj->str, '\0', len);
     }
     return obj->str;
@@ -196,7 +196,7 @@ __attribute__((nonnull)) evastr evacatprintf(evastr dst,
     va_end(args);
     if (len < 0)
         goto Fail;
-    len++; // add terminating null term
+    len++;  // add terminating null term
     if ((size_t) len > sizeof(Sbuf)) {
         buf = eva_malloc(len);
         if (!buf)
