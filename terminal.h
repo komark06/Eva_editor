@@ -21,11 +21,7 @@ DESCRIPTION:
 
 TIME: 2022/10/10
 */
-void disableRawMode(void)
-{
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal_config.orig_termios) == -1)
-        die("tcsetattr");
-}
+void disableRawMode(void);
 
 /*
 DESCRIPTION:
@@ -35,7 +31,18 @@ DESCRIPTION:
 TIME: 2022/10/10
 */
 void enableRawMode(void);
-int getCursorPosition(void);
+
+/*
+DESCRIPTION:
+    Get the row and column of cursor and assign it to @terminal_config.
+
+RETURN VALUE:
+    On succeed, return 0
+    On error, return -1 and set @errno.
+            , return -2. It indicates that there is no escape sequence.
+
+TIME: 2022/10/20
+*/
 int getWindowSize(void);
 
 /*
@@ -52,7 +59,7 @@ DESCRIPTION:
     Refresh screen.
 
 RETURN VALUE:
-    On succeed, return 0
+    On succeed, return 0.
     On error, return 1 and set @errno.
 
 TIME: 2022/10/17
@@ -60,7 +67,7 @@ TIME: 2022/10/17
 int refresh(void);
 
 /*
-    Below functions don't change on screen immediately. It will effect only when the function refresh() is called.
+    [WARNING]: Below functions don't change on screen immediately. It will effect only when the function refresh() is called.
 */
 
 /*
@@ -69,7 +76,7 @@ DESCRIPTION:
 
 RETURN VALUE:
     On succeed, return 0
-    On error, return 1 and set @errno.
+    On error, return -1 and set @errno.
     
     VT100 reference: https://vt100.net/docs/vt100-ug/chapter3.html#ED
 
@@ -83,7 +90,7 @@ DESCRIPTION:
     
 RETURN VALUE:
     On succeed, return 0
-    On error, return 1 and set @errno.
+    On error, return -1 and set @errno.
     
     VT100 reference: https://vt100.net/docs/vt100-ug/chapter3.html#CUP
 
@@ -98,7 +105,7 @@ DESCRIPTION:
 
 RETURN VALUE:
     On succeed, return 0
-    On error, return 1 and set @errno.
+    On error, return -1 and set @errno.
 
 TIME: 2022/10/10
 */

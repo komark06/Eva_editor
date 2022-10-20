@@ -10,7 +10,6 @@
 
 
 /* Global variable */
-struct editorConfig terminal_config;
 static evastr bufio = NULL;
 
 void die(const char *s)
@@ -61,7 +60,7 @@ void enableRawMode(void)
     }
 }
 
-int getCursorPosition(void)
+static inline int getCursorPosition(void)
 {
     char buf[32];
     unsigned int i = 0;
@@ -79,7 +78,7 @@ int getCursorPosition(void)
     buf[i] = '\0';
 
     if (strncmp(buf,"\x1b[",2))
-        return -1;
+        return -2;
     if (sscanf(&buf[2], "%hu;%hu", &terminal_config.screenrows, &terminal_config.screencols) != 2)
         return -1;
 
@@ -108,10 +107,12 @@ int refresh(void)
         errno = 0;
         ssize_t sv = write(STDIN_FILENO,cur,len);
         if (sv == -1)
-            return 1;
+            return -1;
         cur += sv;
         len -= sv;
     } while(len);
+    evafree(bufio);
+    bufio = NULL;
     return 0;
 }
 
