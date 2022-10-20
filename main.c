@@ -34,14 +34,15 @@ void editorDrawRows(void)
         int len = snprintf(buf,sizeof(buf),"%hu\r\n",y+1);
         if (len < 0)
             die("snprintf");
-        write(STDOUT_FILENO, buf, len);
-        //write(STDOUT_FILENO, "~\r\n", 3);
+        if (add_screen(buf,len))
+            die(Memory_Error_Message);
     }
-    char buf[1024];
-    int len = snprintf(buf,sizeof(buf),"row = %hu, col = %hu",terminal_config.screenrows,terminal_config.screencols);
+    char ed[1024];
+    int len = snprintf(ed,sizeof(ed),"row = %hu, col = %hu",terminal_config.screenrows,terminal_config.screencols);
     if (len < 0)
         die("snprintf");
-    write(STDOUT_FILENO,buf,len);
+    if (add_screen(ed,len))
+        die(Memory_Error_Message);
 }
 
 void editorRefreshScreen(void)

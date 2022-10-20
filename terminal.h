@@ -109,12 +109,12 @@ RETURN VALUE:
 
 TIME: 2022/10/10
 */
-int cursor_reposition(void);
+int reposition_cursor(void);
 
 /*
 DESCRIPTION:
-    Call clear_screen() and then cursor_reposition().
-    If clear_screen() failed, cursor_reposition() won't execute.
+    Call clear_screen() and then reposition_cursor().
+    If clear_screen() failed, reposition_cursor() won't execute.
 
 RETURN VALUE:
     On succeed, return 0
