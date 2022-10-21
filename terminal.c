@@ -9,6 +9,7 @@
 #define REPOSITION_CURSOR "\x1b[H" // VT100 reference: https://vt100.net/docs/vt100-ug/chapter3.html#CUP
 #define HIDE_CURSOR "\x1b[?25l" // VT100 reference: https://vt100.net/docs/vt510-rm/DECTCEM.html
 #define SHOW_CURSOR "\x1b[?25h" // VT100 reference: https://vt100.net/docs/vt510-rm/DECTCEM.html
+#define CLEAR_CURSOR_RIGHT "\x1b[K" // VT100 reference: https://vt100.net/docs/vt100-ug/chapter3.html#EL
 
 /* Global variable */
 static evastr bufio = NULL;
@@ -166,6 +167,24 @@ int hide_cursor(void)
 int show_cursor(void)
 {
     evastr dst = evancat(bufio,SHOW_CURSOR,sizeof(SHOW_CURSOR)-1);
+    if (!dst)
+        return -1;
+    bufio = dst;
+    return 0;
+}
+
+int move_cursor(void)
+{
+    evastr dst = evacatprintf(bufio,"\x1b[%hd;%hdH",terminal_config.currentrow,terminal_config.currentcol);
+    if (!dst)
+        return -1;
+    bufio = dst;
+    return 0;  
+}
+
+int clear_cursor_r(void)
+{
+    evastr dst = evancat(bufio,CLEAR_CURSOR_RIGHT,sizeof(CLEAR_CURSOR_RIGHT)-1);
     if (!dst)
         return -1;
     bufio = dst;

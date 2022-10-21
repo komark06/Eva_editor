@@ -8,8 +8,8 @@
 #include "common.h"
 
 struct editorConfig {
-    unsigned short screenrows;
-    unsigned short screencols;
+    unsigned short screenrows,screencols;
+    unsigned short currentrow,currentcol;
     struct termios orig_termios;
 };
 
@@ -147,5 +147,29 @@ RETURN VALUE:
 TIME: 2022/10/20
 */
 int show_cursor(void);
+
+/*
+DESCRIPTION:
+    Move cursor to position due to @terminal_config.currentcol and terminal_config.currentrow
+
+RETURN VALUE:
+    On succeed, return 0
+    On error, return -1.
+
+TIME: 2022/10/20
+*/
+int move_cursor(void);
+
+/*
+DESCRIPTION:
+    Clear the right of the cursor
+
+RETURN VALUE:
+    On succeed, return 0
+    On error, return -1.
+
+TIME: 2022/10/20
+*/
+int clear_cursor_r(void);
 
 #endif  // !defined(__TERMINAL_H__)

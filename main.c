@@ -30,11 +30,7 @@ char editorReadKey(void)
 void editorDrawRows(void)
 {
     for (unsigned short y = 0; y < terminal_config.screenrows -1; y++) {
-        char buf[32];
-        int len = snprintf(buf,sizeof(buf),"%hu",y+1);
-        if (len < 0)
-            die("snprintf");
-        if (add_screen(buf,len))
+        if (add_screen("~",1))
             die(Memory_Error_Message);
         if (terminal_config.screenrows/2 == y){
             unsigned short wellen = sizeof(WELCOME);
@@ -43,7 +39,7 @@ void editorDrawRows(void)
                 wellen = terminal_config.screencols;
                 pad = 0;
             } else{
-                pad = (terminal_config.screencols - wellen)/2;
+                pad = (terminal_config.screencols - wellen-1)/2;
             }
             while(pad > 0){
                 if(add_screen(" ",1))
@@ -67,17 +63,13 @@ void editorDrawRows(void)
 
 void editorRefreshScreen(void)
 {
-    if (hide_cursor())
-        die(Memory_Error_Message);
-    if (clear_reposition())
+    if (hide_cursor() || clear_reposition())
         die(Memory_Error_Message);
     editorDrawRows();
-    if (reposition_cursor())
-        die(Memory_Error_Message);
-    if (show_cursor())
+    if (reposition_cursor() || show_cursor())
         die(Memory_Error_Message);
     if (refresh())
-        die("write");
+        die("refresh");
 }
 
 /*** input ***/
@@ -88,7 +80,6 @@ void editorProcessKeypress(void)
 
     switch (c) {
     case CTRL_KEY('q'):
-        clear_reposition();
         exit(0);
         break;
     }
@@ -98,6 +89,8 @@ void editorProcessKeypress(void)
 
 void initEditor(void)
 {
+    terminal_config.currentcol = 1;
+    terminal_config.currentrow = 1;
     if (getWindowSize())
         die("getWindowSize");
 }
