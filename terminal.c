@@ -131,6 +131,16 @@ int add_screen(const char *buf, size_t len)
     return 0;
 }
 
+int add_space(unsigned int len)
+{
+    while(len > 0){
+        if(add_screen(" ",1))
+            return -1;
+        len--;
+    }
+    return 0;
+}
+
 int clear_screen(void)
 {
     evastr dst = evancat(bufio,CLEAR_SCREEN,sizeof(CLEAR_SCREEN)-1);

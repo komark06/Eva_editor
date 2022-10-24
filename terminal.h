@@ -85,6 +85,19 @@ int add_screen(const char *buf, size_t len);
 
 /*
 DESCRIPTION:
+    Add space padding to screen.
+
+RETURN VALUE:
+    On succeed, return 0
+    On error, return -1.
+              return -2 when @buf is NULL.
+
+TIME: 2022/10/20
+*/
+int add_space(unsigned int len);
+
+/*
+DESCRIPTION:
     Clear screen.
 
 RETURN VALUE:
