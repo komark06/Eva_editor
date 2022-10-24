@@ -1,5 +1,5 @@
 CC=gcc
-CFLAG =-g -Og -Wextra -Wall -Winline -std=c99 -pedantic -fsanitize=leak -fsanitize=address -fsanitize=undefined
+CFLAG =-g -Og -Wextra -Wall -Winline -std=c99 -pedantic
 EXE=eva
 
 all:main.c
