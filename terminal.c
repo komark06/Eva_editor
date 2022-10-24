@@ -107,14 +107,14 @@ int refresh(void)
 {
     evastr cur = bufio;
     uint32_t len = evalen(bufio);
-    do{
-        errno = 0;
+    errno = 0;
+    while(len){
         ssize_t sv = write(STDIN_FILENO,cur,len);
         if (sv == -1)
             return -1;
         cur += sv;
         len -= sv;
-    } while(len);
+    };
     evafree(bufio);
     bufio = NULL;
     return 0;
