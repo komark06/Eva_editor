@@ -204,13 +204,12 @@ __attribute__((nonnull)) evastr evacatprintf(evastr dst,
     va_end(args);
     if (len < 0)
         goto Fail;
-    len++;  // add terminating null term
     if ((size_t) len > sizeof(Sbuf)) {
         buf = eva_malloc(len);
         if (!buf)
             goto Fail;
     }
-    if (vsnprintf(buf, len, format, temp) < 0)
+    if (vsnprintf(buf, len + 1, format, temp) < 0)  // add terminating null term
         goto Fail;
     va_end(temp);
     dst = evancat(dst, buf, len);
