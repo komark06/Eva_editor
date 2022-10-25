@@ -10,6 +10,7 @@ ifneq ($(fsan),0)
 endif
 
 obj:$(OBJ) 
+	clang-format -i *.c *.h
 	$(CC) -o $(EXE) $(OBJ) $(CFLAG)
 
 %.o: %.c

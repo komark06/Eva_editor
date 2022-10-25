@@ -8,8 +8,8 @@
 #include "common.h"
 
 struct editorConfig {
-    unsigned short screenrows,screencols;
-    unsigned short currentrow,currentcol;
+    unsigned short screenrows, screencols;
+    unsigned short currentrow, currentcol;
     struct termios orig_termios;
 };
 
@@ -48,7 +48,8 @@ int getWindowSize(void);
 /*
 DESCRIPTION:
     Urgent error handling.
-    Simply, we just call clear_reposition() and then print error message. Finally, call exit().
+    Simply, we just call clear_reposition() and then print error message.
+Finally, call exit().
 
 TIME: 2022/10/10
 */
@@ -67,7 +68,8 @@ TIME: 2022/10/17
 int refresh(void);
 
 /*
-    [WARNING]: Below functions don't change on screen immediately. It will effect only when the function refresh() is called.
+    [WARNING]: Below functions don't change on screen immediately. It will
+   effect only when the function refresh() is called.
 */
 
 /*
@@ -103,7 +105,7 @@ DESCRIPTION:
 RETURN VALUE:
     On succeed, return 0
     On error, return -1.
-    
+
     VT100 reference: https://vt100.net/docs/vt100-ug/chapter3.html#ED
 
 TIME: 2022/10/10
@@ -113,11 +115,11 @@ int clear_screen(void);
 /*
 DESCRIPTION:
     Change the position of cursor to top left corner.
-    
+
 RETURN VALUE:
     On succeed, return 0
     On error, return -1.
-    
+
     VT100 reference: https://vt100.net/docs/vt100-ug/chapter3.html#CUP
 
 TIME: 2022/10/10
@@ -163,7 +165,8 @@ int show_cursor(void);
 
 /*
 DESCRIPTION:
-    Move cursor to position due to @terminal_config.currentcol and terminal_config.currentrow
+    Move cursor to position due to @terminal_config.currentcol and
+terminal_config.currentrow
 
 RETURN VALUE:
     On succeed, return 0
