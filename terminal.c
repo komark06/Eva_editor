@@ -21,8 +21,16 @@
     "\x1b[K"  // VT100 reference:
               // https://vt100.net/docs/vt100-ug/chapter3.html#EL
 
+#define ADD_SCREEN(str) add_screen(str, sizeof(str) - 1)
+
+struct bufio {
+    evastr content;
+    uint32_t len;
+};
+typedef struct bufio bufio_t;
+
 /* Global variable */
-static evastr bufio = NULL;
+static bufio_t bufio = {.content = NULL, .len = 0};
 
 void die(const char *s)
 {
@@ -34,11 +42,11 @@ void die(const char *s)
 
 void disableRawMode(void)
 {
-    evafree(bufio);
     clear_reposition();
     refresh();
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal_config.orig_termios) == -1)
         die("tcsetattr");
+    evafree(bufio.content);
 }
 
 void enableRawMode(void)
@@ -117,18 +125,15 @@ int getWindowSize(void)
 
 int refresh(void)
 {
-    evastr cur = bufio;
-    uint32_t len = evalen(bufio);
+    evastr cur = bufio.content;
     errno = 0;
-    while (len) {
-        ssize_t sv = write(STDIN_FILENO, cur, len);
+    while (bufio.len) {
+        ssize_t sv = write(STDIN_FILENO, cur, bufio.len);
         if (sv == -1)
             return -1;
         cur += sv;
-        len -= sv;
+        bufio.len -= sv;
     };
-    evafree(bufio);
-    bufio = NULL;
     return 0;
 }
 
@@ -136,10 +141,11 @@ int add_screen(const char *buf, size_t len)
 {
     if (!buf)
         return -2;
-    evastr dst = evancat(bufio, buf, len);
+    evastr dst = evancat(bufio.content, buf, len);
     if (!dst)
         return -1;
-    bufio = dst;
+    bufio.content = dst;
+    bufio.len = evalen(bufio.content);
     return 0;
 }
 
@@ -155,21 +161,12 @@ int add_space(unsigned int len)
 
 int clear_screen(void)
 {
-    evastr dst = evancat(bufio, CLEAR_SCREEN, sizeof(CLEAR_SCREEN) - 1);
-    if (!dst)
-        return -1;
-    bufio = dst;
-    return 0;
+    return ADD_SCREEN(CLEAR_SCREEN);
 }
 
 int reposition_cursor(void)
 {
-    evastr dst =
-        evancat(bufio, REPOSITION_CURSOR, sizeof(REPOSITION_CURSOR) - 1);
-    if (!dst)
-        return -1;
-    bufio = dst;
-    return 0;
+    return ADD_SCREEN(REPOSITION_CURSOR);
 }
 
 int clear_reposition(void)
@@ -180,39 +177,27 @@ int clear_reposition(void)
 
 int hide_cursor(void)
 {
-    evastr dst = evancat(bufio, HIDE_CURSOR, sizeof(HIDE_CURSOR) - 1);
-    if (!dst)
-        return -1;
-    bufio = dst;
-    return 0;
+    return ADD_SCREEN(HIDE_CURSOR);
 }
 
 int show_cursor(void)
 {
-    evastr dst = evancat(bufio, SHOW_CURSOR, sizeof(SHOW_CURSOR) - 1);
-    if (!dst)
-        return -1;
-    bufio = dst;
-    return 0;
+    return ADD_SCREEN(SHOW_CURSOR);
 }
 
 int move_cursor(void)
 {
     evastr dst =
-        evacatprintf(bufio, "\x1b[%hd;%hdH", terminal_config.currentcol,
+        evacatprintf(bufio.content, "\x1b[%hd;%hdH", terminal_config.currentcol,
                      terminal_config.currentrow);
     if (!dst)
         return -1;
-    bufio = dst;
+    bufio.content = dst;
+    bufio.len = evalen(bufio.content);
     return 0;
 }
 
 int clear_cursor_r(void)
 {
-    evastr dst =
-        evancat(bufio, CLEAR_CURSOR_RIGHT, sizeof(CLEAR_CURSOR_RIGHT) - 1);
-    if (!dst)
-        return -1;
-    bufio = dst;
-    return 0;
+    return ADD_SCREEN(CLEAR_CURSOR_RIGHT);
 }
