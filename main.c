@@ -16,13 +16,31 @@ enum editorKey {
     ARROW_RIGHT,
     ARROW_UP,
     ARROW_DOWN,
+    DEL_KEY,
     PAGE_UP,
-    PAGE_DOWN
+    PAGE_DOWN,
+    HOME_KEY,
+    END_KEY
 };
 
 
 /* Global variable */
 struct editorConfig terminal_config;
+
+/*** file i/o ***/
+/*
+void editorOpen() {
+  const char *line = "Hello, world!";
+  terminal_config.content.str = evanew(line);
+  E.row.size = linelen;
+  E.row.chars = malloc(linelen + 1);
+  memcpy(E.row.chars, line, linelen);
+  E.row.chars[linelen] = '\0';
+  E.numrows = 1;
+}*/
+
+
+/*** input ***/
 
 int editorReadKey(void)
 {
@@ -44,10 +62,20 @@ int editorReadKey(void)
                     return '\x1b';
                 if (seq[2] == '~') {
                     switch (seq[1]) {
+                    case '1':
+                        return HOME_KEY;
+                    case '3':
+                        return DEL_KEY;
+                    case '4':
+                        return END_KEY;
                     case '5':
                         return PAGE_UP;
                     case '6':
                         return PAGE_DOWN;
+                    case '7':
+                        return HOME_KEY;
+                    case '8':
+                        return END_KEY;
                     }
                 }
             } else {
@@ -60,7 +88,18 @@ int editorReadKey(void)
                     return ARROW_RIGHT;
                 case 'D':
                     return ARROW_LEFT;
+                case 'H':
+                    return HOME_KEY;
+                case 'F':
+                    return END_KEY;
                 }
+            }
+        } else if (seq[0] == 'O') {
+            switch (seq[1]) {
+            case 'H':
+                return HOME_KEY;
+            case 'F':
+                return END_KEY;
             }
         }
         return '\x1b';
@@ -73,10 +112,12 @@ int editorReadKey(void)
 
 void editorDrawRows(void)
 {
+    // Draw top half of screen
     for (unsigned short y = 0; y < terminal_config.screencols / 2; y++) {
         if (add_screen("~\n\r", 4))
             die(Memory_Error_Message);
     }
+    // Draw middle line
     if (add_screen("~", 1))
         die(Memory_Error_Message);
     unsigned short wellen = sizeof(WELCOME) - 1;
@@ -91,10 +132,12 @@ void editorDrawRows(void)
         die(Memory_Error_Message);
     if (add_screen(WELCOME, wellen))
         die(Memory_Error_Message);
+    // Draw down half of screen
     for (unsigned short y = 0; y < terminal_config.screencols / 2 - 1; y++) {
         if (add_screen("~\n\r", 4))
             die(Memory_Error_Message);
     }
+    // Draw last line
     char ed[128];
     int len = snprintf(ed, sizeof(ed), "(%hu,%hu)", terminal_config.currentcol,
                        terminal_config.currentrow);
@@ -121,20 +164,20 @@ void editorMoveCursor(int key)
 {
     switch (key) {
     case ARROW_LEFT:
-        if (terminal_config.currentrow > 1)
-            terminal_config.currentrow--;
-        break;
-    case ARROW_RIGHT:
-        if (terminal_config.currentrow != terminal_config.screenrows)
-            terminal_config.currentrow++;
-        break;
-    case ARROW_UP:
         if (terminal_config.currentcol > 1)
             terminal_config.currentcol--;
         break;
-    case ARROW_DOWN:
+    case ARROW_RIGHT:
         if (terminal_config.currentcol != terminal_config.screencols)
             terminal_config.currentcol++;
+        break;
+    case ARROW_UP:
+        if (terminal_config.currentrow > 1)
+            terminal_config.currentrow--;
+        break;
+    case ARROW_DOWN:
+        if (terminal_config.currentrow != terminal_config.screenrows)
+            terminal_config.currentrow++;
         break;
     }
 }
@@ -146,6 +189,12 @@ void editorProcessKeypress(void)
     switch (c) {
     case CTRL_KEY('q'):
         exit(0);
+        break;
+    case HOME_KEY:
+        terminal_config.currentrow = 1;
+        break;
+    case END_KEY:
+        terminal_config.currentrow = terminal_config.screenrows;
         break;
     case PAGE_UP:
         terminal_config.currentcol = 1;
@@ -170,6 +219,11 @@ void initEditor(void)
     terminal_config.currentrow = 1;
     if (getWindowSize())
         die("getWindowSize");
+    terminal_config.content.str = malloc(sizeof(*terminal_config.content.str) *
+                                         terminal_config.currentrow);
+    if (!terminal_config.content.str)
+        die(Memory_Error_Message);
+    terminal_config.content.rows = terminal_config.currentrow;
 }
 
 int main()

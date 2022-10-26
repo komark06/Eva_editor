@@ -6,11 +6,18 @@
 #include <termios.h>
 #include <unistd.h>
 #include "common.h"
+#include "eva_string.h"
+
+struct textrow {
+    unsigned int rows;
+    evastr *str;
+};
 
 struct editorConfig {
     unsigned short screenrows, screencols;
     unsigned short currentrow, currentcol;
     struct termios orig_termios;
+    struct textrow content;
 };
 
 extern struct editorConfig terminal_config;

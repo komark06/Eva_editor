@@ -47,6 +47,7 @@ void disableRawMode(void)
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal_config.orig_termios) == -1)
         die("tcsetattr");
     evafree(bufio.content);
+    free(terminal_config.content.str);
 }
 
 void enableRawMode(void)
@@ -117,8 +118,8 @@ int getWindowSize(void)
             return -1;
         return getCursorPosition();
     } else {
-        terminal_config.screencols = ws.ws_row;
-        terminal_config.screenrows = ws.ws_col;
+        terminal_config.screencols = ws.ws_col;
+        terminal_config.screenrows = ws.ws_row;
         return 0;
     }
 }
@@ -188,8 +189,8 @@ int show_cursor(void)
 int move_cursor(void)
 {
     evastr dst =
-        evacatprintf(bufio.content, "\x1b[%hd;%hdH", terminal_config.currentcol,
-                     terminal_config.currentrow);
+        evacatprintf(bufio.content, "\x1b[%hd;%hdH", terminal_config.currentrow,
+                     terminal_config.currentcol);
     if (!dst)
         return -1;
     bufio.content = dst;
