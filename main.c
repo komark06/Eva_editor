@@ -184,9 +184,15 @@ void editorDrawFile()
 {
     if (hide_cursor() || clear_reposition())
         memory_error();
-    for (unsigned int i = 0; i < terminal_config.screenrows; ++i) {
+    for (unsigned int i = terminal_config.rowoff;
+         i < terminal_config.screenrows + terminal_config.rowoff; ++i) {
         const evastr src = terminal_config.content.str[i];
-        if (add_screen(src, evalen(src)) || add_screen("\n\r", 2))
+        uint32_t len;
+        if (evalen(src) > terminal_config.screencols)
+            len = terminal_config.screencols;
+        else
+            len = evalen(src);
+        if (add_screen(src, len) || add_screen("\n\r", 2))
             memory_error();
     }
     if (move_cursor() || show_cursor())
