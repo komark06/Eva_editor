@@ -44,7 +44,7 @@ void die(const char *s)
 void memory_error(void)
 {
     clear_reposition();
-    fprintf(stderr,Memory_Error_Message);
+    fprintf(stderr, Memory_Error_Message);
     exit(EXIT_FAILURE);
 }
 
@@ -55,6 +55,9 @@ void disableRawMode(void)
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal_config.orig_termios) == -1)
         die("tcsetattr");
     evafree(bufio.content);
+    for (unsigned int i = 0; i < terminal_config.content.currow; ++i) {
+        evafree(terminal_config.content.str[i]);
+    }
     free(terminal_config.content.str);
 }
 

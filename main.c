@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -7,7 +8,6 @@
 #include "eva_string.h"
 #include "terminal.h"
 
-#define Memory_Error_Message "Not enough memory"
 #define WELCOME "Welcomde to Eva_Editor 0.0.1\n\r"
 #define CTRL_KEY(k) ((k) &0x1f)
 
@@ -23,21 +23,54 @@ enum editorKey {
     END_KEY
 };
 
-
 /* Global variable */
 struct editorConfig terminal_config;
 
+/*** row operation ***/
+
+int editorAppendRow(const char *s, size_t len)
+{
+    if (terminal_config.content.maxrow == terminal_config.content.currow) {
+        if (sizeof(*terminal_config.content.str) >
+            SIZE_MAX / 2 / terminal_config.content.maxrow)
+            return -1;
+        char **str = realloc(terminal_config.content.str,
+                             sizeof(*terminal_config.content.str) *
+                                 terminal_config.content.maxrow * 2);
+        if (!str)
+            return -1;
+        terminal_config.content.str = str;
+        terminal_config.content.maxrow *= 2;
+    }
+    terminal_config.content.str[terminal_config.content.currow] =
+        evannew(s, len);
+    if (!terminal_config.content.str[terminal_config.content.currow])
+        return -1;
+    terminal_config.content.currow++;
+    return 0;
+}
+
 /*** file i/o ***/
-/*
-void editorOpen() {
-  const char *line = "Hello, world!";
-  terminal_config.content.str = evanew(line);
-  E.row.size = linelen;
-  E.row.chars = malloc(linelen + 1);
-  memcpy(E.row.chars, line, linelen);
-  E.row.chars[linelen] = '\0';
-  E.numrows = 1;
-}*/
+
+void editorOpen(const char *filename)
+{
+    errno = 0;
+    FILE *fr = fopen(filename, "r");
+    if (!fr)
+        die("fopen");
+    char *line = NULL;
+    size_t linecap = 0;
+    ssize_t linelen;
+    while ((linelen = getline(&line, &linecap, fr)) != -1) {
+        while (linelen > 0 &&
+               (line[linelen - 1] == '\n' || line[linelen - 1] == '\r'))
+            linelen--;
+        if (editorAppendRow(line, linelen))
+            memory_error();
+    }
+    free(line);
+    fclose(fr);
+}
 
 
 /*** input ***/
@@ -113,29 +146,29 @@ int editorReadKey(void)
 void editorDrawRows(void)
 {
     // Draw top half of screen
-    for (unsigned short y = 0; y < terminal_config.screencols / 2; y++) {
+    for (unsigned short y = 0; y < terminal_config.screenrows / 2; y++) {
         if (add_screen("~\n\r", 4))
-            die(Memory_Error_Message);
+            memory_error();
     }
     // Draw middle line
     if (add_screen("~", 1))
-        die(Memory_Error_Message);
+        memory_error();
     unsigned short wellen = sizeof(WELCOME) - 1;
     int pad;
-    if (wellen > terminal_config.screenrows) {
-        wellen = terminal_config.screenrows;
+    if (wellen > terminal_config.screencols) {
+        wellen = terminal_config.screencols;
         pad = 0;
     } else {
-        pad = (terminal_config.screenrows - wellen) / 2;
+        pad = (terminal_config.screencols - wellen) / 2;
     }
     if (add_space(pad))
-        die(Memory_Error_Message);
+        memory_error();
     if (add_screen(WELCOME, wellen))
-        die(Memory_Error_Message);
+        memory_error();
     // Draw down half of screen
-    for (unsigned short y = 0; y < terminal_config.screencols / 2 - 1; y++) {
+    for (unsigned short y = 0; y < terminal_config.screenrows / 2 - 1; y++) {
         if (add_screen("~\n\r", 4))
-            die(Memory_Error_Message);
+            memory_error();
     }
     // Draw last line
     char ed[128];
@@ -144,16 +177,31 @@ void editorDrawRows(void)
     if (len < 0)
         die("snprintf");
     if (add_screen(ed, len))
-        die(Memory_Error_Message);
+        memory_error();
+}
+
+void editorDrawFile()
+{
+    if (hide_cursor() || clear_reposition())
+        memory_error();
+    for (unsigned int i = 0; i < terminal_config.screenrows; ++i) {
+        const evastr src = terminal_config.content.str[i];
+        if (add_screen(src, evalen(src)) || add_screen("\n\r", 2))
+            memory_error();
+    }
+    if (move_cursor() || show_cursor())
+        memory_error();
+    if (refresh())
+        die("refresh");
 }
 
 void editorRefreshScreen(void)
 {
     if (hide_cursor() || clear_reposition())
-        die(Memory_Error_Message);
+        memory_error();
     editorDrawRows();
     if (move_cursor() || show_cursor())
-        die(Memory_Error_Message);
+        memory_error();
     if (refresh())
         die("refresh");
 }
@@ -213,23 +261,35 @@ void editorProcessKeypress(void)
 
 /*** init ***/
 
-void initEditor(void)
+void initEditor(int yes)
 {
     terminal_config.currentcol = 1;
     terminal_config.currentrow = 1;
     if (getWindowSize())
         die("getWindowSize");
-    terminal_config.content.str = malloc(sizeof(*terminal_config.content.str) *
-                                         terminal_config.currentrow);
-    if (!terminal_config.content.str)
-        die(Memory_Error_Message);
-    terminal_config.content.rows = terminal_config.currentrow;
+    if (yes) {
+        terminal_config.content.str = malloc(
+            sizeof(*terminal_config.content.str) * terminal_config.currentrow);
+        if (!terminal_config.content.str)
+            memory_error();
+        terminal_config.content.maxrow = terminal_config.currentrow;
+    }
 }
 
-int main()
+int main(int argc, char **argv)
 {
     enableRawMode();
-    initEditor();
+    if (argc >= 2) {
+        initEditor(1);
+        editorOpen(argv[1]);
+        while (1) {
+            editorDrawFile();
+            editorProcessKeypress();
+        }
+    }
+
+    // Welcome
+    initEditor(0);
     while (1) {
         editorRefreshScreen();
         editorProcessKeypress();

@@ -17,6 +17,7 @@ struct textrow {
 struct editorConfig {
     unsigned short screenrows, screencols;
     unsigned short currentrow, currentcol;
+    unsigned int rowoff;
     struct termios orig_termios;
     struct textrow content;
 };
