@@ -9,7 +9,8 @@
 #include "eva_string.h"
 
 struct textrow {
-    unsigned int rows;
+    unsigned int currow;
+    unsigned int maxrow;
     evastr *str;
 };
 
@@ -61,6 +62,16 @@ Finally, call exit().
 TIME: 2022/10/10
 */
 void die(const char *s);
+
+/*
+DESCRIPTION:
+    Handle not enough momory.
+    Simply, we just call clear_reposition() and then print error message.
+Finally, call exit().
+
+TIME: 2022/10/27
+*/
+void memory_error(void);
 
 /*
 DESCRIPTION:

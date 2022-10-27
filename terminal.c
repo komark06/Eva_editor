@@ -4,6 +4,7 @@
 
 #define GETATTR_ERR "tcgetattr"
 #define SETATTR_ERR "tcsetattr"
+#define Memory_Error_Message "Not enough memory\n\r"
 
 #define CLEAR_SCREEN \
     "\x1b[2J"  // VT100 reference:
@@ -37,6 +38,13 @@ void die(const char *s)
     clear_reposition();
     show_errno(s);
     putchar('\r');
+    exit(EXIT_FAILURE);
+}
+
+void memory_error(void)
+{
+    clear_reposition();
+    fprintf(stderr,Memory_Error_Message);
     exit(EXIT_FAILURE);
 }
 
