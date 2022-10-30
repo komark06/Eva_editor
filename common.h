@@ -1,6 +1,6 @@
-#if !defined(__COMMON__H)
+#if !defined(__COMMON_H__)
 
-#define __COMMON__H
+#define __COMMON_H__
 
 #include <errno.h>
 #include <stdio.h>
@@ -164,4 +164,4 @@ Fail:
     return -1;
 }
 
-#endif  // !defined(__COMMON__H)
+#endif  // !defined(__COMMON_H__)

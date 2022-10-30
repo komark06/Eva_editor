@@ -1,5 +1,5 @@
-#if !defined(__COMPILER_H)
-#define __COMPILER_H
+#if !defined(__COMPILER_H__)
+#define __COMPILER_H__
 
 #define BUILD_BUG_ON_ZERO(e) (sizeof(char[1 - 2 * !!(e)]) - 1)
 
@@ -28,4 +28,4 @@
 #endif
 #endif
 
-#endif  // !defined(__COMPILER_H)
+#endif  // !defined(__COMPILER_H__)
