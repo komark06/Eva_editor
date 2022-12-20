@@ -57,7 +57,7 @@ static unsigned int digit10(const unsigned long long val)
 static inline eva_t *evagrow(evastr src, uint32_t len)
 {
     if (!src)
-        return NULL;
+        return realpos(evannew(NULL, len));
     eva_t *obj = realpos(src);
     if (obj->space >= len)
         return obj;
@@ -67,11 +67,12 @@ static inline eva_t *evagrow(evastr src, uint32_t len)
         else
             len = obj->len << 1;
     }
-    if (unlikely(sizeof(eva_t) > SIZE_MAX - 1 - len))
+    if (unlikely(sizeof(eva_t) > UINT32_MAX - 1 - len))
         return NULL;
     obj = eva_realloc(obj, sizeof(eva_t) + len + 1);
     if (!obj)
         return NULL;
+    obj->str[len] = '\0';
     obj->space = len - obj->len;
     return obj;
 }
@@ -95,8 +96,12 @@ evastr evanew(const char *src)
 
 evastr evannew(const char *src, uint32_t len)
 {
-    if (unlikely(sizeof(eva_t) > SIZE_MAX - 1 - len))
+    printf("%u\n", len);
+    if (unlikely(sizeof(eva_t) + len > UINT32_MAX - 1)) {
+        printf("FAIL");
         return NULL;
+    }
+
     eva_t *obj = eva_malloc(sizeof(eva_t) + len + 1);
     if (unlikely(!obj))
         return NULL;
@@ -106,7 +111,7 @@ evastr evannew(const char *src, uint32_t len)
         memcpy(obj->str, src, len);
         obj->str[len] = '\0';
     } else {
-        memset(obj->str, '\0', len);
+        memset(obj->str, '\0', len + 1);
     }
     return obj->str;
 }
@@ -227,6 +232,19 @@ __attribute__((nonnull)) evastr evaresize(evastr src)
     if (evaspace(src) == 0)
         return src;
     return eva_realloc(realpos(src), sizeof(eva_t) + evalen(src) + 1);
+}
+
+evastr evagrowzero(evastr src, uint32_t len)
+{
+    if (!src)
+        return evannew(NULL, len);
+    eva_t *tmp = evagrow(src, len);
+    if (!tmp)
+        return NULL;
+    memset(tmp->str + tmp->len, '\0', tmp->space);
+    tmp->len += tmp->space;
+    tmp->space = 0;
+    return tmp->str;
 }
 
 void evafree(evastr src)
@@ -387,6 +405,43 @@ static int testevancat(unsigned int count)
     return 0;
 }
 
+static int testevagrowzero(unsigned int count)
+{
+    char src[MAX_STR_SIZE] = {0};
+    while (count) {
+        evastr string = evagrowzero(NULL, MAX_STR_SIZE);
+        if (!string)
+            return 1;
+        if (memcmp(src, string, MAX_STR_SIZE)) {
+            evafree(string);
+            return -1;
+        }
+
+        if (evalen(string) != MAX_STR_SIZE) {
+            evafree(string);
+            return -2;
+        }
+        evastr tmp = evagrowzero(string, MAX_STR_SIZE * 2);
+        if (!tmp) {
+            evafree(string);
+            return 1;
+        }
+        string = NULL;
+        if (memcmp(src, tmp, MAX_STR_SIZE) ||
+            memcmp(src, tmp + MAX_STR_SIZE, MAX_STR_SIZE)) {
+            evafree(tmp);
+            return -3;
+        }
+        if (evalen(tmp) != MAX_STR_SIZE * 2) {
+            evafree(tmp);
+            return -4;
+        }
+        count--;
+        evafree(tmp);
+    }
+    return 0;
+}
+
 int main(void)
 {
     srand(time(NULL));
@@ -396,6 +451,9 @@ int main(void)
     test_this("evaLL", testevaLL(count) == 0);
     test_this("evancpy", testevancpy(count) == 0);
     test_this("evancat", testevancat(count) == 0);
+    test_this("evagrowzero", testevagrowzero(count) == 0);
+    putchar('\n');
+    test_report();
     return 0;
 }
 

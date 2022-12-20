@@ -1,7 +1,8 @@
 CC=gcc
 DISABLE=-Wno-unused-result
-CFLAG=-g -Og -Wextra -Wall -Winline -std=c99 -pedantic $(FSAN) $(DISABLE)
-OBJ=common.o eva_string.o ncurse.o
+# FSAN = -fsanitize=address -fsanitize=leak
+CFLAG=-g -O0 -Wextra -Wall -Winline -std=c99 -pedantic $(FSAN) $(DISABLE) 
+OBJ=common.o eva_string.o ncurse.o content.o
 EXE=eva
 
 obj:$(OBJ) 

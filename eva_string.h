@@ -24,7 +24,7 @@ __attribute__((nonnull(2))) evastr evancat(evastr dst,
 __attribute__((nonnull(2))) evastr evacateva(evastr dst, const evastr src);
 __attribute__((nonnull(2))) __attribute__((format(printf, 2, 3))) evastr
 evacatprintf(evastr dst, const char *format, ...);
-
+evastr evagrowzero(evastr src, uint32_t len);
 __attribute__((nonnull)) evastr evaresize(evastr dst);
 void evafree(evastr nerv);
 
